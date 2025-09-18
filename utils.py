@@ -186,6 +186,7 @@ class ControllerDataStats:
         sorted_list = sorted(res_counter.items(), key=lambda x: x[0][0] * x[0][1], reverse=True)
         return sorted_list
     
+    
     def get_meshnum_in_range_by_actionid(self, start_action_id, end_action_id):
         """获取指定 action_id 范围内所有 Action 的 meshNum 总和"""
         start_event_id = self.get_event_id(start_action_id)
@@ -199,7 +200,47 @@ class ControllerDataStats:
                 total += action.meshNum
         return total
 
+    def get_actions_by_meshnum_threshold(self, threshold_meshnum, start_action_id=None, end_action_id=None):
+        """
+        返回超过指定面数的 action id 列表，按面数从大到小排序
+        :param threshold_meshnum: 面数阈值
+        :param start_action_id: 起始 action_id，可选，默认为None（不限制起始范围）
+        :param end_action_id: 结束 action_id，可选，默认为None（不限制结束范围）
+        :return: list of tuple [(meshnum, action_id), ...] 按面数从大到小排序
+        """
+        result = []
+        for action_id, action_data in self.actionid_action_map.items():
+            # 检查是否在指定范围内
+            if start_action_id is not None and action_id < start_action_id:
+                continue
+            if end_action_id is not None and action_id > end_action_id:
+                continue
+            
+            if action_data.meshNum > threshold_meshnum:
+                result.append((action_data.meshNum, action_id))
+        # 按面数从大到小排序
+        return sorted(result, key=lambda x: x[0], reverse=True)
 
+    def get_top_n_actions_by_meshnum(self, n, start_action_id=None, end_action_id=None):
+        """
+        返回面数最多的前N个action
+        :param n: 需要返回的数量
+        :param start_action_id: 起始 action_id，可选，默认为None（不限制起始范围）
+        :param end_action_id: 结束 action_id，可选，默认为None（不限制结束范围）
+        :return: list of tuple [(meshnum, action_id), ...] 按面数从大到小排序，最多返回n个
+        """
+        result = []
+        for action_id, action_data in self.actionid_action_map.items():
+            # 检查是否在指定范围内
+            if start_action_id is not None and action_id < start_action_id:
+                continue
+            if end_action_id is not None and action_id > end_action_id:
+                continue
+            
+            if action_data.meshNum > 0:  # 只统计有面数的action
+                result.append((action_data.meshNum, action_id))
+        # 按面数从大到小排序，并返回前N个
+        return sorted(result, key=lambda x: x[0], reverse=True)[:n]
 
     def print_stats(self):
         """打印所有事件的输入输出纹理统计"""

@@ -74,11 +74,19 @@ class DrawcallStatisticsWindow(qrd.CaptureViewer):
     def update_range_statistics(self, start, end):
         mesh_num = self.stats.get_meshnum_in_range_by_actionid(start, end)
         texture_num = len(self.stats.get_inputs_in_range_by_actionid(start, end))
-        msg = f"面数: {mesh_num}     纹理数: {texture_num}     Drawcall数: {end-start+1}\n"
-        self.mqt.SetWidgetText(self.breadcrumbs, msg)
+        msg = f"总面数: {mesh_num}     纹理数: {texture_num}     Drawcall数: {end-start+1}\n"
         
+        # 添加面数统计信息
+        # 获取面数超过1000的action列表
+        mesh_actions = self.stats.get_top_n_actions_by_meshnum(10, start, end)
+        if mesh_actions:
+            msg += f"\n排行前{10}的Action列表:\n"
+            for meshnum, action_id in mesh_actions:
+                msg += f"   ActionID: {action_id}, 面数: {meshnum}\n"
+        
+        # 添加纹理分辨率统计
         texture_resolutions = self.stats.count_texture_resolutions_in_range_by_actionid(start, end)
-        msg += "纹理分辨率统计:\n"
+        msg += "\n纹理分辨率统计:\n"
         for res, count in texture_resolutions:
             msg += f"   {res}: {count}张\n"
         self.mqt.SetWidgetText(self.breadcrumbs, msg)

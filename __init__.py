@@ -23,9 +23,16 @@
 ###############################################################################
 import qrenderdoc as qrd
 from .texture_exporter import TextureExporter
-from .drawcall_statistics import  window_callback
+from .drawcall_statistics import window_callback
 import os
-from .utils import TextureSaver, get_filename_without_extension 
+from .utils import TextureSaver, get_filename_without_extension
+
+from .test.test import TestClass
+
+import sys
+
+sys.path.append(os.path.join(os.path.dirname(__file__), "lib"))
+
 
 # 全局实例
 texture_exporter = None
@@ -42,35 +49,65 @@ def texture_callback(ctx: qrd.CaptureContext, data):
         return
 
     ctx.Replay().AsyncInvoke("", texture_exporter.save_current_draw_textures)
-    
+
+
 def all_texture_callback(ctx: qrd.CaptureContext, data):
-    open_dir = ctx.Extensions().OpenDirectoryName("选择导出目录", os.path.expanduser("~/Pictures"))
+    open_dir = ctx.Extensions().OpenDirectoryName(
+        "选择导出目录", os.path.expanduser("~/Pictures")
+    )
     if not open_dir:
         return
     TextureSaver.open_directory = open_dir  # 设置全局变量
-    
+
     def do_export(controller):
         name = ctx.GetCaptureFilename()
         name = get_filename_without_extension(name)
-    
+
         count = TextureSaver.export_all_textures(ctx, controller, name)
-        ctx.Extensions().MessageDialog(f"导出完成，共导出 {count} 张纹理到：{os.path.join(open_dir, name)}", "导出纹理")
-        
+        ctx.Extensions().MessageDialog(
+            f"导出完成，共导出 {count} 张纹理到：{os.path.join(open_dir, name)}",
+            "导出纹理",
+        )
+
     ctx.Replay().AsyncInvoke("", do_export)
+
+
+def test_callback(ctx: qrd.CaptureContext, data):
+    test = TestClass(ctx)
+    test.test_example()
+
+
+def reload_plugin_callback(ctx: qrd.CaptureContext, data):
+    loadstr = ctx.Extensions().LoadExtension("LcL-RenderdocTextureExporter")
+    if loadstr:
+        ctx.Extensions().MessageDialog(loadstr, "插件重载失败")
+    else:
+        # ctx.Extensions().MessageDialog("插件重载完成", "重载插件")
+        print("插件重载完成 LcL-RenderdocTextureExporter")
 
 
 def register(version: str, ctx: qrd.CaptureContext):
     global texture_exporter
     texture_exporter = TextureExporter(ctx)
 
-    # 注册菜单项
+    # 注册重载插件到事件菜单栏
+    ctx.Extensions().RegisterPanelMenu(
+        qrd.PanelMenu.EventBrowser, ["重载插件"], reload_plugin_callback
+    )
+
+    ctx.Extensions().RegisterPanelMenu(
+        qrd.PanelMenu.EventBrowser, ["测试"], test_callback
+    )
+
+    # 注册纹理菜单项
     ctx.Extensions().RegisterPanelMenu(
         qrd.PanelMenu.TextureViewer, ["Export Draw Texture"], texture_callback
     )
     ctx.Extensions().RegisterPanelMenu(
         qrd.PanelMenu.TextureViewer, ["Export All Texture"], all_texture_callback
     )
-    
+
+    # 注册窗口菜单项
     ctx.Extensions().RegisterWindowMenu(
         qrd.WindowMenu.Window, ["DrawCall Statistics"], window_callback
     )
